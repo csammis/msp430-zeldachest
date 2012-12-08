@@ -41,12 +41,22 @@ unsigned char note = 0;
 void play()
 {
     sound_playing = 1;
-    TACCR1 = 150; // Duty cycle (speaker volume)
+    TACCR1 = 1; // Duty cycle (speaker volume)
 
-    TACCR0 = SMCLK_FREQ / freqs[note];
-    
-    if (note == 12)
+    int idx = 10;
+    switch (note)
     {
+    case 0: idx = 392; break;
+    case 1: idx = 392; break;
+    case 2: idx = 375; break;
+    case 3: idx = 392; break;
+    }
+    
+    TACCR0 = SMCLK_FREQ / idx; //freqs[idx];
+    
+    if (note == 4)
+    {
+        TACCR1 = 0;
         note = 0;
     }
     else
