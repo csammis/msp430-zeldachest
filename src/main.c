@@ -16,6 +16,16 @@
 
 #define Interrupt(x) void __attribute__((interrupt(x)))
 
+void hard_delay()
+{
+    __asm__
+    (
+        "mov #1000, r2  \n\t"
+        "dec r2         \n\t"
+        "jnz $-2        \n\t"
+    );
+}
+
 #define SMCLK_FREQ 125000
 
 // Half-steps from A220 to A440
@@ -47,43 +57,64 @@ unsigned short duration[] = { 1,      1,    1,    1,      1,      1,       6 };
 // Playing state
 unsigned char sound_playing;
 unsigned char curr_note;
-unsigned char wdt_state;
+unsigned short curr_duration;
+unsigned char time_to_switch;
 
 void play()
 {
     sound_playing = 1;
-    curr_note = 0;
-    wdt_state = 0;
+    curr_note = -1;
+    time_to_switch = 1;
 
     // Start the WDT in interval mode based off of SMCLK (125Khz) / 32768 = about 4Hz
-    WDTCTL = (WDTPW + WDTTMSEL + WDTCNTCL + 0);
+    WDTCTL = (WDTPW + WDTTMSEL + WDTCNTCL + WDTIS0);
     IFG1 &= ~WDTIFG;
     IE1  |=  WDTIE;
-
 }
 
 Interrupt(WDT_VECTOR) wdt_isr()
 {
-    unsigned short note = notes[curr_note];
-    if (note == REST)
+    if (time_to_switch)
     {
         TACCR1 = SPEAKER_OFF;
+
+        // Get the next note
+        curr_note++;
+        if (curr_note >= NUM_NOTES)
+        {
+            // Disable WDT interval interrupts and stop the timer
+            IE1 &= ~WDTIE;
+            WDTCTL = (WDTPW + WDTHOLD);
+            sound_playing = 0;
+        }
+        else
+        {
+            unsigned short note = notes[curr_note];
+            curr_duration = duration[curr_note];
+
+            // Delay a bit for articulation
+            hard_delay();
+
+            if (note != REST)
+            {
+                TACCR0 = SMCLK_FREQ / frequencies[note];
+                TACCR1 = SPEAKER_ON;
+            }
+
+            time_to_switch = 0;
+        }
     }
     else
     {
-        TACCR0 = SMCLK_FREQ / frequencies[note];
-        TACCR1 = SPEAKER_ON;
-    }
-
-    curr_note++;
-    if (curr_note > NUM_NOTES)
-    {
-        TACCR1 = SPEAKER_OFF;
-
-        // Disable WDT interval interrupts and stop the timer
-        IE1 &= ~WDTIE;
-        WDTCTL = (WDTPW + WDTHOLD);
-        sound_playing = 0;
+        if (curr_duration > 1)
+        {
+            time_to_switch = 0;
+            curr_duration--;
+        }
+        else
+        {
+            time_to_switch = 1;
+        }
     }
 
     IFG1 &= ~WDTIFG;
@@ -138,12 +169,7 @@ void debounce_switch()
     P1IE  &= ~SWITCH;
     P1IFG &= ~SWITCH;
 
-    __asm__
-    (
-        "mov #1000, r2  \n\t"
-        "dec r2         \n\t"
-        "jnz $-2        \n\t"
-    );
+    hard_delay();
 
     P1IFG &= ~SWITCH;
     P1IE  |=  SWITCH;
