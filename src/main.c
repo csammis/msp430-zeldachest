@@ -14,11 +14,13 @@
 
 #include <msp430.h>
 
-// da . . da da do daaaaaaaaaaaaaaaa
+#define Interrupt(x) void __attribute__((interrupt(x)))
 
 #define SMCLK_FREQ 125000
 
-unsigned short freqs[] = { 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392, 415, 440 };
+// Half-steps from A220 to A440
+unsigned short frequencies[] = { 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392, 415, 440 };
+#define REST        0xFF
 #define NOTE_A220   0
 #define NOTE_Bb     1
 #define NOTE_B      2
@@ -33,45 +35,62 @@ unsigned short freqs[] = { 220, 233, 247, 262, 277, 294, 311, 330, 349, 370, 392
 #define NOTE_Ab     11
 #define NOTE_A440   12
 
+// da . . da da do daaaaaaaaaaaaaaaa
+unsigned short notes[]    = { NOTE_G, REST, REST, NOTE_G, NOTE_G, NOTE_Fs, NOTE_G };
+unsigned short duration[] = { 1,      1,    1,    1,      1,      1,       6 };
+#define NUM_NOTES 7
+
+// Technically this is the PWM duty cycle, not a switch. ON = 1 just doesn't deafen me.
+#define SPEAKER_ON 1
+#define SPEAKER_OFF 0
 
 // Playing state
 unsigned char sound_playing;
-unsigned char note = 0;
+unsigned char curr_note;
+unsigned char wdt_state;
 
 void play()
 {
     sound_playing = 1;
-    TACCR1 = 1; // Duty cycle (speaker volume)
+    curr_note = 0;
+    wdt_state = 0;
 
-    int idx = 10;
-    switch (note)
+    // Start the WDT in interval mode based off of SMCLK (125Khz) / 32768 = about 4Hz
+    WDTCTL = (WDTPW + WDTTMSEL + WDTCNTCL + 0);
+    IFG1 &= ~WDTIFG;
+    IE1  |=  WDTIE;
+
+}
+
+Interrupt(WDT_VECTOR) wdt_isr()
+{
+    unsigned short note = notes[curr_note];
+    if (note == REST)
     {
-    case 0: idx = 392; break;
-    case 1: idx = 392; break;
-    case 2: idx = 375; break;
-    case 3: idx = 392; break;
-    }
-    
-    TACCR0 = SMCLK_FREQ / idx; //freqs[idx];
-    
-    if (note == 4)
-    {
-        TACCR1 = 0;
-        note = 0;
+        TACCR1 = SPEAKER_OFF;
     }
     else
     {
-        note++;
+        TACCR0 = SMCLK_FREQ / frequencies[note];
+        TACCR1 = SPEAKER_ON;
     }
 
-    //TACCR1 = 0; // Speaker off
-    sound_playing = 0;
+    curr_note++;
+    if (curr_note > NUM_NOTES)
+    {
+        TACCR1 = SPEAKER_OFF;
+
+        // Disable WDT interval interrupts and stop the timer
+        IE1 &= ~WDTIE;
+        WDTCTL = (WDTPW + WDTHOLD);
+        sound_playing = 0;
+    }
+
+    IFG1 &= ~WDTIFG;
 }
 
 #define PWMOUT BIT6
 #define SWITCH BIT3
-
-#define Interrupt(x) void __attribute__((interrupt(x)))
 
 void debounce_switch();
 
