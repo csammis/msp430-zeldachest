@@ -46,7 +46,7 @@ unsigned short frequencies[] = { 220, 233, 247, 262, 277, 294, 311, 330, 349, 37
 #define NOTE_A440   12
 
 // da . . da da do daaaaaaaaaaaaaaaa
-unsigned short notes[]    = { NOTE_G, REST, REST, NOTE_G, NOTE_G, NOTE_Fs, NOTE_G };
+unsigned short notes[]    = { NOTE_Ab, REST, REST, NOTE_Ab, NOTE_Ab, NOTE_G, NOTE_Ab };
 unsigned short duration[] = { 1,      1,    1,    1,      1,      1,       6 };
 #define NUM_NOTES 7
 
@@ -148,7 +148,7 @@ int main()
     TACCR1 = 0;
     
     __bis_SR_register(CPUOFF | GIE); // Switch to LPM0 and enable interrupts
-
+    
     return 0;
 }
 
