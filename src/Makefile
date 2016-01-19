@@ -13,28 +13,37 @@ MCU        = msp430g2231
 # List all the source files here
 # eg if you have a source file foo.c then list it here
 SOURCES = main.c
-# Include are located in the Include directory
-INCLUDES = -IInclude
-# Defines
+
+# GCC paths
+GCC_BASE_DIR = /usr/local/msp430-uniarch-20110716
+# GCC variant...for quick switching between mspgcc and TI/Redhat's msp430-gcc bin names
+# Set GCC_VAR = elf- for the msp430-gcc binaries and leave blank for mspgcc
+GCC_VAR = 
+
+GCC_DIR = $(GCC_BASE_DIR)/bin
+INCLUDE_PATH = -I $(GCC_BASE_DIR)/include
+LIBRARY_PATH = -L $(GCC_BASE_DIR)/include
+# Additional defines
 DEFINES = 
+
 # Add or subtract whatever MSPGCC flags you want. There are plenty more
 #######################################################################################
-CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(DEFINES) $(INCLUDES)   
+CFLAGS   = -mmcu=$(MCU) -g -Os -Wall -Wunused $(DEFINES) $(INCLUDE_PATH)   
 ASFLAGS  = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
-LDFLAGS  = -mmcu=$(MCU) -Wl,-Map=$(TARGET).map
+LDFLAGS  = -mmcu=$(MCU) $(LIBRARY_PATH)
 ########################################################################################
-CC       = msp430-gcc
-LD       = msp430-ld
-AR       = msp430-ar
-AS       = msp430-gcc
-GASP     = msp430-gasp
-NM       = msp430-nm
-OBJCOPY  = msp430-objcopy
-OBJDUMP  = msp430-objdump
-RANLIB   = msp430-ranlib
-STRIP    = msp430-strip
-SIZE     = msp430-size
-READELF  = msp430-readelf
+CC       = $(GCC_DIR)/msp430-$(GCC_VAR)gcc
+LD       = $(GCC_DIR)/msp430-$(GCC_VAR)ld
+AR       = $(GCC_DIR)/msp430-$(GCC_VAR)ar
+AS       = $(GCC_DIR)/msp430-$(GCC_VAR)gcc
+GASP     = $(GCC_DIR)/msp430-$(GCC_VAR)gasp
+NM       = $(GCC_DIR)/msp430-$(GCC_VAR)nm
+OBJCOPY  = $(GCC_DIR)/msp430-$(GCC_VAR)objcopy
+OBJDUMP  = $(GCC_DIR)/msp430-$(GCC_VAR)objdump
+RANLIB   = $(GCC_DIR)/msp430-$(GCC_VAR)ranlib
+STRIP    = $(GCC_DIR)/msp430-$(GCC_VAR)strip
+SIZE     = $(GCC_DIR)/msp430-$(GCC_VAR)size
+READELF  = $(GCC_DIR)/msp430-$(GCC_VAR)readelf
 MSPDEBUG = mspdebug
 CP       = cp -p
 RM       = rm -f
